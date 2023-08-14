@@ -5,7 +5,6 @@ import org.aarteaga.test.springboot.app.models.Banco;
 import org.aarteaga.test.springboot.app.models.Cuenta;
 import org.aarteaga.test.springboot.app.repositories.BancoRepository;
 import org.aarteaga.test.springboot.app.repositories.CuentaRepository;
-import org.aarteaga.test.springboot.app.services.CuentaService;
 import org.aarteaga.test.springboot.app.services.CuentaServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -78,10 +77,10 @@ class SpringbootTestApplicationTests {
 
 		verify(cuentaRepository, times(3)).findById(1L);
 		verify(cuentaRepository, times(3)).findById(2L);
-		verify(cuentaRepository, times(2)).update(any(Cuenta.class));
+		verify(cuentaRepository, times(2)).save(any(Cuenta.class));
 
 		verify(bancoRepository, times(2)).findById(1L);
-		verify(bancoRepository).update(any(Banco.class));
+		verify(bancoRepository).save(any(Banco.class));
 
 		verify(cuentaRepository, times(6)).findById(anyLong());
 		verify(cuentaRepository, never()).findAll();
@@ -98,9 +97,11 @@ class SpringbootTestApplicationTests {
 		assertEquals("1000", saldoOrigen.toPlainString());
 		assertEquals("2000", saldoDestino.toPlainString());
 
-		assertThrows(DineroInsuficienteException.class, ()-> {
+		DineroInsuficienteException dinero = assertThrows(DineroInsuficienteException.class, ()-> {
 			service.transferir(1L, 2L, new BigDecimal("1200"), 1L);
 		});
+
+		System.out.println("Message of exception: " + dinero.getMessage());
 
 		saldoOrigen = service.revisarSaldo(1L);
 		saldoDestino = service.revisarSaldo(2L);
@@ -113,10 +114,10 @@ class SpringbootTestApplicationTests {
 
 		verify(cuentaRepository, times(3)).findById(1L);
 		verify(cuentaRepository, times(2)).findById(2L);
-		verify(cuentaRepository, never()).update(any(Cuenta.class));
+		verify(cuentaRepository, never()).save(any(Cuenta.class));
 
 		verify(bancoRepository, times(1)).findById(1L);
-		verify(bancoRepository, never()).update(any(Banco.class));
+		verify(bancoRepository, never()).save(any(Banco.class));
 
 		verify(cuentaRepository, times(5)).findById(anyLong());
 		verify(cuentaRepository, never()).findAll();

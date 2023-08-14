@@ -2,10 +2,19 @@ package org.aarteaga.test.springboot.app.models;
 
 import org.aarteaga.test.springboot.app.exceptions.DineroInsuficienteException;
 
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Table;
 import java.math.BigDecimal;
 import java.util.Objects;
 
+@Entity
+@Table(name="cuentas")
 public class Cuenta {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String persona;
     private BigDecimal saldo;
