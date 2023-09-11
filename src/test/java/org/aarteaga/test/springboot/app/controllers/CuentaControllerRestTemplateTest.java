@@ -5,27 +5,31 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.aarteaga.test.springboot.app.models.Cuenta;
 import org.aarteaga.test.springboot.app.models.TransaccionDto;
-import org.aarteaga.test.springboot.app.services.CuentaService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 
 import static org.junit.jupiter.api.Assertions.*;
+@Tag("integracion_rt")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class CuentaControllerRestTemplateTest {
@@ -91,6 +95,77 @@ class CuentaControllerRestTemplateTest {
    assertEquals("900.00", cuenta.getSaldo().toPlainString());
    assertEquals(new Cuenta(1L, "Andrés", new BigDecimal("900.00")), cuenta);
 
+ }
+
+ @Test
+ @Order(3)
+ void testListar() throws JsonProcessingException {
+   ResponseEntity<Cuenta[]> respuesta = client.getForEntity(crearUri("/api/cuentas"), Cuenta[].class);
+   List<Cuenta> cuentas = Arrays.asList(respuesta.getBody());
+
+   assertEquals(HttpStatus.OK, respuesta.getStatusCode());
+   assertEquals(MediaType.APPLICATION_JSON, respuesta.getHeaders().getContentType());
+
+   assertEquals(2, cuentas.size());
+   assertEquals(1L, cuentas.get(0).getId());
+   assertEquals("Andrés", cuentas.get(0).getPersona());
+   assertEquals("900.00", cuentas.get(0).getSaldo().toPlainString());
+   assertEquals(2L, cuentas.get(1).getId());
+   assertEquals("Jhon", cuentas.get(1).getPersona());
+   assertEquals("2100.00", cuentas.get(1).getSaldo().toPlainString());
+
+   JsonNode json = objectMapper.readTree(objectMapper.writeValueAsString(cuentas));
+   assertEquals(1L, json.get(0).path("id").asLong());
+   assertEquals("Andrés", json.get(0).path("persona").asText());
+   assertEquals("900.0", json.get(0).path("saldo").asText());
+   assertEquals(2L, json.get(1).path("id").asLong());
+   assertEquals("Jhon", json.get(1).path("persona").asText());
+   assertEquals("2100.0", json.get(1).path("saldo").asText());
+ }
+
+ @Test
+ @Order(4)
+ void testGuardar(){
+   Cuenta cuenta = new Cuenta(null, "Pepa", new BigDecimal("3800"));
+
+   ResponseEntity<Cuenta> respuesta = client.postForEntity(crearUri("/api/cuentas"), cuenta, Cuenta.class);
+   assertEquals(HttpStatus.CREATED, respuesta.getStatusCode());
+   assertEquals(MediaType.APPLICATION_JSON, respuesta.getHeaders().getContentType());
+
+   Cuenta cuentaCreada = respuesta.getBody();
+
+   assertEquals(3L, cuentaCreada.getId());
+   assertEquals("Pepa", cuentaCreada.getPersona());
+   assertEquals("3800", cuentaCreada.getSaldo().toPlainString());
+
+
+ }
+
+ @Test
+ @Order(5)
+ void testEliminar(){
+
+   ResponseEntity<Cuenta[]> respuesta = client.getForEntity(crearUri("/api/cuentas"), Cuenta[].class);
+   List<Cuenta> cuentas = Arrays.asList(respuesta.getBody());
+   assertEquals(3, cuentas.size());
+
+   //client.delete(crearUri("/api/cuentas/3"));
+   Map<String, Long> pathVariables = new HashMap<>();
+   pathVariables.put("id", 3L);
+   ResponseEntity<Void> exchange = client.exchange(crearUri("/api/cuentas/{id}"), HttpMethod.DELETE, null, Void.class,
+     pathVariables);
+
+   assertEquals(HttpStatus.NO_CONTENT, exchange.getStatusCode());
+   assertFalse(exchange.hasBody());
+
+   respuesta = client.getForEntity(crearUri("/api/cuentas"), Cuenta[].class);
+   cuentas = Arrays.asList(respuesta.getBody());
+   assertEquals(2, cuentas.size());
+
+   ResponseEntity<Cuenta> respuestaDetalle = client.getForEntity(crearUri("/api/cuentas/3"), Cuenta.class);
+   Cuenta cuenta = respuestaDetalle.getBody();
+   assertEquals(HttpStatus.NOT_FOUND, respuestaDetalle.getStatusCode());
+   assertFalse(respuestaDetalle.hasBody());
  }
 
  private String crearUri(String uri){
